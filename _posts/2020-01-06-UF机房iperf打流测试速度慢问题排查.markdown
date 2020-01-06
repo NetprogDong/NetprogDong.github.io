@@ -60,3 +60,5 @@ YH机房到BX机房  10.23.3.85 --- 10.77.113.155 测试速度900Mb/S左右
 排查进展同步给业务方后，业务方查看服务器tcp_window_scaling，果然未开启该功能，调整参数后业务恢复。
 
 echo 1 >  /proc/sys/net/ipv4/tcp_window_scaling
+
+{% include gitalk.html %}
