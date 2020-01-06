@@ -2,6 +2,8 @@
 layout: post
 title:  "UF机房iperf打流测试速度慢问题排查"
 date:   2020-01-06 15:29:36 +0530
+description: 下载上传速度慢问题 
+categories: NetworkIssue NetworkTroubleshooting
 ---
 
 ### 问题描述
