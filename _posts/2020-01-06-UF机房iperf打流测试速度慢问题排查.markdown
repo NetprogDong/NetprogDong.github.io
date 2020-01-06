@@ -1,0 +1,59 @@
+## UF机房iperf打流测试速度慢问题排查
+
+### 问题描述
+
+业务方反馈，新搬迁到有孚机房的服务器跨机房下载速度缓慢，同机房测试速度正常。
+
+对比测试：
+
+UF机房本地 10.30.4.48 --- 10.30.4.50  测试速度900Mb/S左右
+
+DBL机房到UF机房  10.41.24.101 --- 10.30.4.50  测试速度300Mb/S左右
+
+YH机房到UF机房  10.23.3.85 --- 10.30.14.53  测试速度300Mb/S左右
+
+UF机房到BX机房  10.30.4.50 --- 10.77.113.155 测试速度300Mb/S左右
+
+YH机房到BX机房  10.23.3.85 --- 10.77.113.155 测试速度900Mb/S左右
+
+### 拓扑环境
+
+各机房网络架构均采用vxlan overlay架构，机房架构统一，机房间通过DCI专网互联，在这里不做具体描述。
+
+### 排查分析过程
+
+1.测试各机房到有孚机房延时稳定，无丢包，并且网络侧无异常告警。
+
+2.对上述测试例抓包，从抓包看5个测试例均无tcp重传报文，印证第1条结论。
+
+以经验判断，这种问题很可能出在**服务器参数配置不当**导致。
+
+对比分析抓包：
+
+从抓包中查看到YH机房、BX机房、DBL机房发送的TCP SYN包中正常有窗口偏移option，滑动窗口够大，不会成为传输瓶颈。
+
+![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/6E8BC850-8C9A-4458-BC0D-ADE519AE88FA.png "图1")
+
+![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/46242B7E-883E-420C-9864-7F21CC741E83.png "图2")
+
+但从有孚机器的SYN包中均未发现支持窗口偏移特性，接收窗口极小。
+
+![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/4175969A-96A0-4F3D-AE47-E75CFC0B3074.png "图3")
+
+![图4](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/294FCD85-FC5C-4452-ABAF-D40CA00D4EF5.png "图4")
+
+滑动窗口偏移特性只有两端都支持才有效，因此从有孚的抓包来看有很多tcp windows full的提示包，这也印证了确实有tcp滑动窗口太小的问题存在。
+
+![图5](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/16883A6C-3262-4614-B508-8194A71DFEB8.png "图5")
+
+但为什么有孚机房内部测试速度是ok的呢？
+
+我猜测是因为UF机房内部互访的RTT只有0.05ms左右，而跨机房的rtt平均在1.2ms左右。
+
+又因为tcp的传输速率与滑动窗口、拥塞窗口、rtt、ssthesh都是息息相关的，因此即使滑动窗口小但在rtt也相对小的情况下，必然速率会提高。
+
+## 解决方案
+
+排查进展同步给业务方后，业务方查看服务器tcp_window_scaling，果然未开启该功能，调整参数后业务恢复。
+
+echo 1 >  /proc/sys/net/ipv4/tcp_window_scaling
