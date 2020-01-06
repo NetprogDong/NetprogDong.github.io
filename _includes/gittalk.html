@@ -1,0 +1,16 @@
+<link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script> 
+<script type="text/javascript" src="/assets/js/md5.min.js"></script>
+<div id="gitalk-container"></div>     
+<script type="text/javascript">
+    var gitalk = new Gitalk({
+        clientID: '650a78cfe5b14b248e48',
+        clientSecret: '51743c07e179ea196dd783f0f92b28376d527dba',
+        repo: 'NetprogDong.github.io',
+        owner: 'NetprogDong',
+        admin: ['NetprogDong'],
+        id: md5(location.pathname),
+        
+    });
+    gitalk.render('gitalk-container');
+</script> 
