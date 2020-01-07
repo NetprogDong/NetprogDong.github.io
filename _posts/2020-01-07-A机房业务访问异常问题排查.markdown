@@ -6,6 +6,8 @@ description: 网络设备静默丢包
 categories: NetworkIssue NetworkTroubleshooting
 ---
 
+_网络问题排查案例分析_
+
 ### 问题描述
 
 1.业务报障A机房二期10.60段访问B机房非常慢。
