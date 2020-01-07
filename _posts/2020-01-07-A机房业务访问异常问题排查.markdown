@@ -2,11 +2,11 @@
 layout: post
 title:  "A机房业务访问异常问题排查"
 date:   2020-01-07 11:28:36 +0530
-description: 网络设备静默丢包 
+description: 网络问题排查案例分析 
 categories: NetworkIssue NetworkTroubleshooting
 ---
 
-_网络问题排查案例分析_
+_网络设备静默丢包_
 
 ### 问题描述
 
