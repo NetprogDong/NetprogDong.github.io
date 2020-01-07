@@ -5,7 +5,7 @@ date:   2020-01-06 15:29:36 +0530
 description: 下载上传速度慢问题 
 categories: NetworkIssue NetworkTroubleshooting
 ---
-业务方反馈，新搬迁到有孚机房的服务器跨机房下载速度缓慢，同机房测试速度正常。
+业务方反馈，新搬迁到UF机房的服务器跨机房下载速度缓慢，同机房测试速度正常。
 
 对比测试：
 
