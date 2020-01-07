@@ -28,7 +28,7 @@ default via fe80::1 dev eth0  proto ra  metric 1024  expires 1391sec hoplimit 64
 default via fe80::1 dev eth1  proto ra  metric 1024  expires 1257sec hoplimit 64
 ```
 
-可以看到，服务器通过eth0和eth1两个网卡都收到了ra报文，并生成了两条等价默认路由分别指到eth0和eth1。又由于eth1上联的是internal内网，内网与外网分别在两个不同的instance实例中，所以访问公网的报文一旦选择从eth1出口发出，必然不能访问公网。
+可以看到，服务器通过eth0和eth1两个网卡都收到了ra报文，并生成了两条等价默认路由分别指到eth0和eth1。又由于eth1上联的是internal内网(eth0是与公网互通的实例external)，内网与外网分别在两个不同的instance实例中，所以访问公网的报文一旦选择从eth1出口发出，必然不能访问公网。
 
 2.关闭交换机对应的internal vsi的ra报文发送功能
 
@@ -56,7 +56,7 @@ default via fe80::1 dev eth0  proto ra  metric 1024  expires 1391sec hoplimit 64
 
 由于土城机房的ipv6地址早已在土城ISP做宣告（ISP静态代播），因此报文丢弃在运营商的可能性不大。
 
-查看br路由表，发现br上没有tcserver的明细128位路由，但是64位网段路由学习正常，下一跳递归到leaf9（vxlan分布式网关环境，所有leaf都会发布服务器网段路由，br根据bgp选路原则优选leaf9）。
+查看br路由表，发现**br上没有tcserver的明细128位路由**，但是64位网段路由学习正常，下一跳递归到leaf9（vxlan分布式网关环境，所有leaf都会发布服务器网段路由，br根据bgp选路原则优选leaf9）。
 
 ```
 <br3>dis ipv routing-table vpn-instance external 2400:89c0:1012:51::122:1 128
@@ -131,3 +131,16 @@ interface Vsi-interface12127
 
 1. 在internal vsi中关闭ipv6功能或将ipv6发送ra消息功能关闭。
 2. 在external vsi中开启ipv6 nd泛洪抑制功能。
+
+### 经验分享
+
+在部署ipv6时，还遇到过很多比较典型的问题，由于某些故障例没有留存排查过程的数据或项目紧急等等原因，最终没有进行梳理形成文档。
+
+在这里简单说下自身对于ipv6部署的经验，避免大家再次采坑。
+
+需要重点关注点如下：
+
+1.网络设备表项容量问题
+
+由于ipv6地址段最长为128位，因此网络设备在存v6表项时与存v4表项有所不同。交换机通过调整不同的运行方式，来实现以不同的方式来存储v4和v6的表项。
+以
