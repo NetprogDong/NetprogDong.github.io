@@ -6,7 +6,7 @@ description: 网络问题排查案例分析
 categories: NetworkIssue NetworkTroubleshooting
 ---
 
-_网络设备静默丢包_
+_网络设备静默丢包类问题_
 
 ### 问题描述
 
