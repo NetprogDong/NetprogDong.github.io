@@ -2,11 +2,11 @@
 layout: post
 title:  "D机房公网vip部分不通或丢包问题"
 date:   2020-01-07 11:34:36 +0530
-description: 交换机bug 
+description: 网络问题排查案例分析
 categories: NetworkIssue NetworkTroubleshooting
 ---
 
-_网络问题排查案例分析_
+_交换机bug类问题_
 
 ### 问题描述
 
