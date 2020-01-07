@@ -2,11 +2,11 @@
 layout: post
 title:  "sinaurl.cn新申请VIP 36.51.252.141 HTTPS请求耗时过长及返回502问题"
 date:   2020-01-07 11:36:36 +0530
-description: 业务服务器异常 
+description: 网络问题排查案例分析
 categories: NetworkIssue NetworkTroubleshooting
 ---
 
-_网络问题排查案例分析_
+_业务服务器异常类问题_
 
 ### 问题描述
 
