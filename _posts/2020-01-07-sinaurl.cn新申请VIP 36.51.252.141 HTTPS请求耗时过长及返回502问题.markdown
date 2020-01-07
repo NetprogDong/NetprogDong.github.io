@@ -1,0 +1,72 @@
+---
+layout: post
+title:  "sinaurl.cn新申请VIP 36.51.252.141 HTTPS请求耗时过长及返回502问题"
+date:   2020-01-07 11:36:36 +0530
+description: 业务服务器异常 
+categories: NetworkIssue NetworkTroubleshooting
+---
+
+### 问题描述
+
+业务方反馈使用新申请的公网vip 36.51.252.141部署业务后出现https请求应答偶发耗时过长，也会出现返回502错误。
+
+![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/DA1B60CE-B8CE-412D-8747-826BD0582E12.png "图1")
+
+
+### 业务转发路径
+
+![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/993DACA7-44F8-4105-8D75-A9EE5ABCA4D5.png "图2")
+
+
+### 排查分析过程
+
+业务转发路径相对复杂，所涉及的4、7层设备较多，需要业务、47层设备运维、网络组共同协作排查。
+
+1.业务方、lvs4层运维同学通过设备日志确认502消息是由公网ssl集群返回，原因为公网ssl集群与后端通讯时超时导致。由此可以确定问题范围在公网ssl集群与rs之间。
+
+2.网络组逐跳查看并结合网络监控、测试工具排查确认网络状况良好，机房内通讯无丢包及延时抖动情况。
+
+3.将rs 10.73.88.236摘除出内网10.73.242.95负载组，仅使用172.16.106.62，进行测试，同时在rs端抓包。
+
+出现请求耗时过长现象，抓包分析截图如下：
+
+![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/A41D1E86-36A4-441C-93D0-1FEA9D544603.png "图3")
+
+可以看到tcp流最后一次握手与http get请求之间的间隔时间有6s+，属异常现象。
+
+4.再将rs 172.16.106.62摘除出内网10.73.242.95负载组，仅使用10.73.88.236，进行测试，同时在rs端抓包。
+
+同样出现请求耗时过长现象
+
+![图4](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/115C24B9-5F2F-4A9C-84B8-EDF7B069FA2B.png "图4")
+
+抓包分析截图如下：
+
+![图5](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/EF2EAC57-4BDA-407F-A730-170A0BC25581.png "图5")
+
+可以看到这条tcp流总耗时12s+，与curl测试结果吻合。
+
+并且该请求流属于异常流，直接被后端关闭，没有正确返回http应答。
+
+1）分析抓包可以发现，rs端在发送完syn&ack后，在tcp超时重传（200ms）后并未收到握手确认报文，导致后续又发送了两个syn&ack重传（no.367和no.439）。
+
+2）过了2s后rs收到了ack报文（no.440），但seq为134，由于rs端还未完成握手阶段，正确的seq应该为1，因此rs认为收到的报文非法，等待9秒后仍未收到正确的ack，于是发送fin结束该tcp流(no.1233)。
+
+3）16:47:30.864699时收到了lvs的ack(no.1258)，从ack的内容及seq判断，此包应该为tcp3次握手的最后一个ack。
+
+报文内容如下：
+
+![图6](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/FE66E7AD-E031-486B-B37F-85B1D64C785E.png "图6")
+
+可以看到，seq为1，并且携带了get请求消息，大小为133字节，因此确认应该是该tcp流的最后一个握手ack。
+
+5.到此，该问题可以确定是由于服务器内核层面在处理数据包时出现报文乱序(抓包使用tcpdump工具，tcpdump在cpu抓包)，导致出现了不符合预期的tcp强制fin/rst，并且收包的时间间隔过长（秒级），从而导致HTTPS请求耗时过长及返回502现象。
+
+由于未在lvs侧同时抓包，因此无法通过此测试例做对比分析确认产生数据包乱序的一方。
+
+6.业务侧更换rs，其他环境完全一致，故障现象消失。对比分析后怀疑rs侧异常所致。
+
+
+### 问题原因
+
+通过以上排查分析过程，当前怀疑rs侧网卡收包后，在上送内核给cpu处理时，出现乱序且上送时间异常情况导致该问题。
