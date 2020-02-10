@@ -38,25 +38,24 @@ podnum = (CORE_downstreamlinknum / SPINE_CORE_connlinknum) * CSratio
 servernum/集群 = servernum/pod * podnum = servernum/LEAF * LEAFnum/pod * podnum  
 
 ### 计算举例
-1. 需求  
-1)需要整集群能够拥有承载服务器台数20000+能力。  
-2)LEAF收敛比尽量小，SPINE收敛比不得高于2:1，CORE收敛比不得高于3:1。  
-3)选型：LEAF选用48*25G+8*100G设备，SPINE选用128*100G设备，CORE选用128*100G设备。
+#### 需求  
+- 需要整集群能够拥有承载服务器台数20000+能力。  
+- LEAF收敛比尽量小，SPINE收敛比不得高于2:1，CORE收敛比不得高于3:1。  
+- 选型：LEAF选用48*25G+8*100G设备，SPINE选用128*100G设备，CORE选用128*100G设备。
 
-2. 分析与设计  
-    - 首先leaf一定是48*25G下联服务器，8*100G上行。  
-    - 为了使单pod承载能力最大化，那么LEAF_SPINE_connlinknum = 1，即leaf每根上行连不同的spine，每pod共8个spine(SPINEnum/pod)。  
-    - 需求SPINE收敛比不得高于2:1，规划SPINE上行48口(SPINE_upstreamlinknum)，下行80口(SPINE_downstreamlinknum)，收敛比1.67:1，满足要求。       通过公式：LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
-      可得出，每pod容纳leaf台数(LEAFnum/pod)=80，可计算出单pod可容纳server数量(servernum/pod)为：
-    - server双上行部署为(80/2)*48=1920
-    - server单上行部署为80*48=3840
+#### 分析与设计  
+- 首先leaf一定是48*25G下联服务器，8*100G上行。  
+- 为了使单pod承载能力最大化，那么LEAF_SPINE_connlinknum = 1，即leaf每根上行连不同的spine，每pod共8个spine(SPINEnum/pod)。  
+- 需求SPINE收敛比不得高于2:1，规划SPINE上行48口(SPINE_upstreamlinknum)，下行80口(SPINE_downstreamlinknum)，收敛比1.67:1，满足要求。通过公式：LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum，可得出每pod容纳leaf台数(LEAFnum/pod)=80，可计算出单pod可容纳server数量(servernum/pod)为：
+    * server双上行部署为(80/2)*48=1920
+    * server单上行部署为80*48=3840
 因此，server双上行部署方式，需要podnum >= 11(20000/1920)；server单上行部署方式，需要podnum >= 6(20000/3840)。  
 
-4)需求CORE收敛比不得高于3:1，规划CORE上行32口(CORE_upstreamlinknum)，下行96口(CORE_downstreamlinknum)，收敛比3:1满足需求。  
-    - 以server双上行部署计算，需要podnum>=11，那么当规划SPINE_CORE_connlinknum=8时：podnum = 96(CORE_downstreamlinknum) / 8(SPINE_CORE_connlinknum) = 12，满足要求(在无特殊需求情况下，规划每个pod的SPINE设备数量与每组CORE设备数量相等，即CSratio=1)  
-    - 以server单上行部署计算，需要podnum>=6，那么当规划SPINE_CORE_connlinknum=16时：podnum = 96 / 16 = 6，满足需求  
+- 需求CORE收敛比不得高于3:1，规划CORE上行32口(CORE_upstreamlinknum)，下行96口(CORE_downstreamlinknum)，收敛比3:1满足需求。  
+    * 以server双上行部署计算，需要podnum>=11，那么当规划SPINE_CORE_connlinknum=8时：podnum = 96(CORE_downstreamlinknum) / 8(SPINE_CORE_connlinknum) = 12，满足要求(在无特殊需求情况下，规划每个pod的SPINE设备数量与每组CORE设备数量相等，即CSratio=1)  
+    * 以server单上行部署计算，需要podnum>=6，那么当规划SPINE_CORE_connlinknum=16时：podnum = 96 / 16 = 6，满足需求  
     
-5)此时，所有相关参数均已获得，如下：
+- 此时，所有相关参数均已获得，如下：
     - 以server双上行部署计算  
     LEAF_SPINE_connlinknum = 1  
     LEAF_upstreamlinknum = 8  
