@@ -12,7 +12,7 @@ clilike是本人自己编写的一款基于python语言实现与终端设备交�
 
 clilike使用pexpect模块，可模拟telnet、ssh等多种设备登陆方式。当前版本clilike仅支持telnet登陆方式，且仅支持h3c、huawei、cisco设备。  
 
-代码仓库链接 [https://github.com/NetprogDong/clilike](https://github.com/NetprogDong/clilike)
+代码仓库链接: [https://github.com/NetprogDong/clilike](https://github.com/NetprogDong/clilike)
 
 ### 环境参数
 
