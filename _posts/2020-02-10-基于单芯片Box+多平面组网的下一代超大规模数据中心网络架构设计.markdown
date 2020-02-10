@@ -11,6 +11,9 @@ categories: 网络架构 网络设计
 ### box架构层级结构  
 SERVER-LEAF-SPINE-CORE
 
+### 架构拓扑如下  
+![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/9697A0E9-6CC4-4EA9-A6B9-28A1160EFA94.png "图1")  
+
 ### 概念介绍  
 * LEAF_SPINE_connlinknum：单台LEAF连接单台SPINE的链路数，规划的数值越小网络扩展性越高  
 * LEAF_upstreamlinknum：LEAF上联端口数，与LEAF规划的收敛比及设备型号相关  
@@ -18,9 +21,6 @@ SERVER-LEAF-SPINE-CORE
 * SPINE_CORE_connlinknum：单台SPINE连接单台CORE的链路数，规划的数值越小网络扩展性越高  
 * SPINE_upstreamlinknum：SPINE上联端口数，与SPINE规划的收敛比及设备型号相关  
 * CORE_downstreamlinknum：CORE下联端口数，与CORE规划的收敛比及设备型号相关
-
-### 架构拓扑如下  
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/9697A0E9-6CC4-4EA9-A6B9-28A1160EFA94.png "图1")  
 
 ### 计算公式  
 1. 拓扑满足要求：每个pod的SPINE设备数量 = 每组CORE设备数量  
