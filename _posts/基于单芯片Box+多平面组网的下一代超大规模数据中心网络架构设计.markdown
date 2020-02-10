@@ -1,0 +1,107 @@
+---
+layout: post
+title:  "基于单芯片Box+多平面组网的下一代超大规模数据中心网络架构设计"
+date:   2020-02-10 13:57 +0530
+description: 网络架构设计
+categories: 网络架构 网络设计
+---
+
+由于box设备具备本身机体硬件设计简单，占用空间小，功耗低以及硬件、运维成本低等优势，当前数据中心网络正在以box形态设备逐步替代传统框式设备。
+
+### box架构层级结构  
+SERVER-LEAF-SPINE-CORE
+
+### 概念介绍  
+* LEAF_SPINE_connlinknum：单台LEAF连接单台SPINE的链路数，规划的数值越小网络扩展性越高  
+* LEAF_upstreamlinknum：LEAF上联端口数，与LEAF规划的收敛比及设备型号相关  
+* SPINE_downstreamlinknum：SPINE下联端口数，与SPINE规划的收敛比及设备型号相关  
+* SPINE_CORE_connlinknum：单台SPINE连接单台CORE的链路数，规划的数值越小网络扩展性越高  
+* SPINE_upstreamlinknum：SPINE上联端口数，与SPINE规划的收敛比及设备型号相关  
+* CORE_downstreamlinknum：CORE下联端口数，与CORE规划的收敛比及设备型号相关
+
+### 架构拓扑如下  
+![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/9697A0E9-6CC4-4EA9-A6B9-28A1160EFA94.png "图1")  
+
+### 计算公式  
+1. 拓扑满足要求：每个pod的SPINE设备数量 = 每组CORE设备数量  
+即：CSratio = COREnum/group : SPINEnum/pod = 1 : 1  
+那么：  
+1)podnum = CORE_downstreamlinknum / SPINE_CORE_connlinknum  
+2)CORE_groupnum = SPINE_upstreamlinknum / SPINE_CORE_connlinknum  
+3)LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
+4)SPINEnum/pod = LEAF_upstreamlinknum / LEAF_SPINE_connlinknum
+
+2. 更普遍的podnum公式  
+podnum = (CORE_downstreamlinknum / SPINE_CORE_connlinknum) * CSratio  
+
+3. server容量计算  
+servernum/集群 = servernum/pod * podnum = servernum/LEAF * LEAFnum/pod * podnum  
+
+### 计算举例
+1. 需求  
+1)需要整集群能够拥有承载服务器台数20000+能力。  
+2)LEAF收敛比尽量小，SPINE收敛比不得高于2:1，CORE收敛比不得高于3:1。  
+3)选型：LEAF选用48*25G+8*100G设备，SPINE选用128*100G设备，CORE选用128*100G设备。
+
+2. 分析与设计  
+1)首先leaf一定是48*25G下联服务器，8*100G上行。  
+2)为了使单pod承载能力最大化，那么LEAF_SPINE_connlinknum = 1，即leaf每根上行连不同的spine，每pod共8个spine(SPINEnum/pod)。  
+3)需求SPINE收敛比不得高于2:1，规划SPINE上行48口(SPINE_upstreamlinknum)，下行80口(SPINE_downstreamlinknum)，收敛比1.67:1，满足要求。通过公式：  
+    - LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
+可得出，每pod容纳leaf台数(LEAFnum/pod)=80，可计算出单pod可容纳server数量(servernum/pod)为：
+    - server双上行部署为(80/2)*48=1920
+    - server单上行部署为80*48=3840
+因此，server双上行部署方式，需要podnum >= 11(20000/1920)；server单上行部署方式，需要podnum >= 6(20000/3840)。  
+4)需求CORE收敛比不得高于3:1，规划CORE上行32口(CORE_upstreamlinknum)，下行96口(CORE_downstreamlinknum)，收敛比3:1满足需求。  
+    - 以server双上行部署计算，需要podnum>=11，那么当规划SPINE_CORE_connlinknum=8时：podnum = 96(CORE_downstreamlinknum) / 8(SPINE_CORE_connlinknum) = 12，满足要求(在无特殊需求情况下，规划每个pod的SPINE设备数量与每组CORE设备数量相等，即CSratio=1)  
+    - 以server单上行部署计算，需要podnum>=6，那么当规划SPINE_CORE_connlinknum=16时：podnum = 96 / 16 = 6，满足需求
+5)此时，所有相关参数均已获得，如下：
+    - 以server双上行部署计算  
+    LEAF_SPINE_connlinknum = 1  
+    LEAF_upstreamlinknum = 8  
+    SPINE_downstreamlinknum = 80  
+    SPINE_CORE_connlinknum = 8  
+    SPINE_upstreamlinknum = 48  
+    CORE_downstreamlinknum = 96  
+    CORE收敛比 = 3:1  
+    SPINE收敛比 = 1.67:1  
+    LEAF收敛比 = 1.5:1  
+    podnum = 12  
+    CORE_groupnum = 6  
+    LEAFnum/pod = 80  
+    SPINEnum/pod = 8  
+    COREnum/group = 8  
+    servernum/2leaf = 48  
+    servernum/pod = 1920  
+    servernum/集群 = 23040  
+    需要设备、互联光纤、光模块数量清单如下：  
+    CORE：48台  
+    SPINE：96台  
+    LEAF：960台  
+    光纤：12288条
+    光模块：24576个  
+    - 以server单上行部署计算  
+    LEAF_SPINE_connlinknum = 1  
+    LEAF_upstreamlinknum = 8  
+    SPINE_downstreamlinknum = 80  
+    SPINE_CORE_connlinknum = 16  
+    SPINE_upstreamlinknum = 48  
+    CORE_downstreamlinknum = 96  
+    CORE收敛比 = 3:1  
+    SPINE收敛比 = 1.67:1  
+    LEAF收敛比 = 1.5:1  
+    podnum = 6  
+    CORE_groupnum = 3  
+    LEAFnum/pod = 80  
+    SPINEnum/pod = 8  
+    COREnum/group = 8  
+    servernum/leaf = 48  
+    servernum/pod = 3840  
+    servernum/集群 = 23040  
+    需要设备数量清单如下：  
+    CORE：24台  
+    SPINE：48台  
+    LEAF：480台  
+    光纤：6144条  
+    光模块：12288个
+    
