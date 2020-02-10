@@ -12,7 +12,7 @@ categories: 网络架构 网络设计
 SERVER-LEAF-SPINE-CORE
 
 ### 架构拓扑如下  
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/9697A0E9-6CC4-4EA9-A6B9-28A1160EFA94.png "图1")  
+![m88x0.png](https://cdn.img.wenhairu.com/images/2020/02/10/m88x0.png)
 
 ### 概念介绍  
 * LEAF_SPINE_connlinknum：单台LEAF连接单台SPINE的链路数，规划的数值越小网络扩展性越高  
