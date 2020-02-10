@@ -47,7 +47,7 @@ servernum/集群 = servernum/pod * podnum = servernum/LEAF * LEAFnum/pod * podnu
 1)首先leaf一定是48*25G下联服务器，8*100G上行。  
 2)为了使单pod承载能力最大化，那么LEAF_SPINE_connlinknum = 1，即leaf每根上行连不同的spine，每pod共8个spine(SPINEnum/pod)。  
 3)需求SPINE收敛比不得高于2:1，规划SPINE上行48口(SPINE_upstreamlinknum)，下行80口(SPINE_downstreamlinknum)，收敛比1.67:1，满足要求。通过公式：  
-    - LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
+    > LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
 可得出，每pod容纳leaf台数(LEAFnum/pod)=80，可计算出单pod可容纳server数量(servernum/pod)为：
     - server双上行部署为(80/2)*48=1920
     - server单上行部署为80*48=3840
