@@ -16,11 +16,11 @@ LVS同学反馈vip：221.179.175.159/116/221/57/207监控报警，并且从不�
 
 从Y机房工具机mtr测试这几个vip有大量丢包。
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/9CB60909-FD8F-415C-8324-B7893DD2DDC8.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m8JNf.png "图1")
 
 ### 拓扑环境
 
-![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/2BCFC0A8-3916-406F-9FA3-9A8CD4413AB9.png "图2")
+![图2](https://cdn.img.wenhairu.com/images/2020/02/11/m8fo3.png "图2")
 
 D机房 = dbl
 
@@ -38,7 +38,7 @@ EBR通过与BR的BGP-PEER学习LVS-SERVER VIP路由。
 
 2）发生路由问题产生环路，流量在ebr和局方直连设备之间不停的循环转发直至ttl超时。
 
-![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/98241BC0-35F5-4C2F-907F-96EE0EC95AD0.png "图3")
+![图3](https://cdn.img.wenhairu.com/images/2020/02/11/m817u.png "图3")
 
 3.LVS同学反馈直连接在D机房EBR下的SNAT-SERVER ping D机房LVS-SERVER不通。
 
@@ -46,30 +46,30 @@ sip:36.156.5.87,dip:221.179.175.207，但是从EBR上使用SNAT网关sip：36.15
 
 4.由于SNAT server到LVS server全部路径都在IDC内部，沿途所有路径可控，相对于从公网故障例作为突破口，此故障例更合适，所以继续重点排查该问题。在SNAT server上ping 221.179.175.207会有偶发的ttl超时回显，并且来源ip为ISP直连我方IP，证明这个icmp request包在EBR与局方设备之间环了，此现象印证了第2部的猜想。
 
-![图4](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/BA08B1CB-668C-495C-BE00-F0F863C0E39C.png "图4")
+![图4](https://cdn.img.wenhairu.com/images/2020/02/11/m8k9C.png "图4")
 
 5.于是开始排查路由是否学习正常，查看到221.179.175.207的路由以及BGP邻居，路由学习正常，bgp邻居及bgp路由无抖动情况。
 
-![图5](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/FAB4E9A8-EBDB-4B7E-B105-1237E57EC64E.png "图5")
+![图5](https://cdn.img.wenhairu.com/images/2020/02/11/m8ZYA.png "图5")
 
-![图6](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/3DD102D6-1618-4121-8F18-81799508CEB1.png "图6")
+![图6](https://cdn.img.wenhairu.com/images/2020/02/11/m8wio.png "图6")
 
-![图7](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/148C4393-C361-4F59-AFD9-7FAEDFFE6AAF.png "图7")
+![图7](https://cdn.img.wenhairu.com/images/2020/02/11/m8E6q.png "图7")
 
 6.如上操作证明非交换机上层路由协议问题以及LVS故障，基本可以定位是EBR这台交换机的底层转发出了异常。
 查看交换机底层ipv4硬转表
 
-![图8](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/C6AC8722-39E9-4500-A6B5-E630168C2AF0.png "图8")
+![图8](https://cdn.img.wenhairu.com/images/2020/02/11/m8oZs.png "图8")
 
 发现故障网段的硬转表在slot1中表项丢失。
 
 查看此时IRF堆叠状态，堆叠状态无异常。
 
-![图9](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/65FD175F-B637-4816-8027-6062CDC96868.png "图9")
+![图9](https://cdn.img.wenhairu.com/images/2020/02/11/m8Knd.png "图9")
 
 7.通过在ebr上reset bgp peer with br以强制刷新表项后恢复。
 
-![图10](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/CD94825E-A10E-4BFE-BB4B-2F60E4F7990F.png "图10")
+![图10](https://cdn.img.wenhairu.com/images/2020/02/11/m87jR.png "图10")
 
 ### 故障原因
 
