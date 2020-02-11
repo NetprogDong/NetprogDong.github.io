@@ -1,0 +1,174 @@
+---
+layout: post
+title:  "RDMA网络学习笔记"
+date:   2020-01-07 11:34:36 +0530
+description: 学习笔记
+categories: 网络技术
+---
+
+RDMA技术是为了解决网络传输中服务器端数据处理的延迟而产生的，RDMA允许用户态的应用程序直接读取或写入远程内存，其中读取与写入过程无需系统内核干预(kernel by pass)，也不会出现内存拷贝动作发生(zero-copy)，从而减少了服务器端处理数据的延迟，解放了CPU处理数据包所消耗的性能。  
+
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/mA8Yh.png "图1")
+
+### RDMA技术分类  
+当前，大致有三类RDMA实现，分别为Infiniband、RoCE、iWARP。  
+* Infiniband：支持RDMA的新一代网络协议。由于这是一种新的网络技术，因此需要支持该技术的NIC和交换机，IB技术是由一家以色列的公司Mellanox捣鼓出来的东西，从服务器网卡到交换机都是由Mellanox一家提供，IB设备成本偏高，并且由一家绑定，不利于后期扩展。
+* iWARP：一个允许在TCP上执行RDMA的网络协议，也就是说可以将RDMA做以太网封装，因此只需要服务器网卡支持iWARP协议即可，交换机等网络设备无特殊要求。由于该协议基于TCP，因此在丢包容忍度上要好于Infiniband和RoCE，但性能上与另外两者有差距。该技术更适用于长距离的RDMA数据传输场景。
+* RoCE：包括RoCEv1和RoCEv2。RoCEv1可以理解为RDMA over Ethernet，也就是说通过二层以太网封装，部署范围仅在二层网络范围内。RoCEv2可以理解为RDMA over UDP，实现RDMA数据三层转发，将部署范围进一步扩大，并且通过UDP实现负载分担，性能上更接近于Infiniband。  
+
+![图2](https://cdn.img.wenhairu.com/images/2020/02/11/m8zGq.png "图2")
+
+在性能、部署范围、成本的综合考量下，RoCEv2似乎更适用于现阶段的RDMA业务部署，本文后续讨论的RDMA技术均为RoCEv2。
+
+### RDMA网络的核心  
+为了保证高吞吐低延时的特点，RDMA最早是被设计应用在IB网络中，IB网络由于设计原因，天生就是一个lossless的网络，而我们现在用的RoCE是基于传统以太网的，无法保证不丢包。并且RDMA协议栈是由网卡硬件实现的，相比TCP协议栈精简了很多，也没有TCP那样复杂的拥塞控制机制。最早的RDMA协议栈中不保存任何重传相关的状态信息，采用go-back-0重传机制，即报文中有任意一个分片丢失，都要从第一个分片开始重传。最新NIC上对重传做了优化，采用go-back-N重传机制，即第N个分片丢失后，只从第N个分片开始重传。虽然有了部分优化，但RDMA对丢包重传仍然非常敏感，少量丢包可能导致RDMA性能大幅度下降。  
+因此，RDMA网络中最重要的工作就是如何将以太网所能产生的各种应用场景的丢包降到最少，也就是说RDMA网络中，流控技术是其最核心也最有难度的部分。  
+
+### 交换机的buffer管理  
+在讲流控技术之前，必须要先了解交换机基本的buffer管理，也就是MMU(Memory Management Unit)。  
+
+![图3](https://cdn.img.wenhairu.com/images/2020/02/11/m82Hf.png "图3")  
+
+如上图，是TD3芯片的MMU，当一个报文从ingress pipeline到egress pipeline的过程中必须要经过MMU，下面简单介绍下MMU：  
+* MMU通常由一块或多块shared buffer组成，所有交换机端口共享shared buffer pool。  
+* cell是buffer管理的最小单元，芯片不同cell的大小也不同。  
+* 每个port的egress通常会有8个queues，入向也会有对应的8个priority groups(下文简称pg)，pg主要是在有PFC流控的时候会用到，在一个没有PFC流控的网络中一般只会有egress的queue。  
+* 在ingress pipeline会根据报文的cos/dscp字段将packet映射到不同的queue和pg上。  
+* 无论是入向的pg还是出向的queue，都只是一种计数方式，比如一个packet dscp为34，入向被映射到了pg5，出向被映射到了queue5，那么这个packet在mmu中会占住一定的空间，比如1个cell，那么这个时候pg5和queue5中都会增加1个cell的计数，当这个packet被转发出去后，那么pg5和queue5的计数都会减1，所有计数的综合我们习惯称为深度。  
+* 除了queueing以外，MMU还有一个核心的组件是Scheduling，当报文存在buffer里面的时候，哪些报文可以转发出去，可以转发多少，都是由Scheduling来控制的，Scheduling的意义是可以对不同的queue设置不同的优先级，这样保证重要性高的报文可以被优先转发，这样高优先级的queue会被优先转发，那么queue的深度就会相对比较浅，就不太容易触发水线造成丢包或者降速，让高优先级的流量(业务)转发更加流畅。常见的Scheduling方式有PQ、WFQ、WRR、DRR等。  
+
+#### TD3的MMU的参数如下  
+
+![图4](https://cdn.img.wenhairu.com/images/2020/02/11/m8bSK.png "图4")  
+
+### 为什么会出现拥塞  
+网络中经常会出现incast场景，例如3个25G端口同时去打1个25G端口，那么被打的25G端口一定来不及把所有的报文全部转发掉，这样持续下去就会造成queue的深度不断增加，如果在一个无任何流控的环境下，理论上任意一个端口的一个queue会占满所有的shared buffer，这样不仅会造成这个端口的taildrop，甚至会影响整个交换机的其他端口转发。  
+为了防止出现上面的情况，RDMA网络会对pg和queue设置一定的水线，当他们的深度达到了这个水线就会触发相应的流控机制(PFC、ECN等)。  
+
+### RDMA的流控机制  
+* 目标：零丢包、高吞吐、低延时
+* 核心技术：PFC、ECN、DC-QCN
+
+### PFC  
+如何让网络实现lossless，逻辑很简单，就是在快发生拥塞时，通知发端暂停发送数据，等待拥塞解除后再发送。PFC就是这类技术。在讲PFC之前，先来了解下PFC的前身，Ethernet Pause。  
+#### Ethernet原理如下  
+Pause帧是二层流控的一种帧，它的作用是在本端入向缓冲区溢出或达到水线时，通知对端设备在指定时间范围内不要再发包给自己了。  
+在设备A出现ingress port buffer计数超过水线后触发向对端B反压pause X-OFF；对端B在收到pause X-OFF后，该端口停止发送数据；当设备A的ingress port buffer计数低于水线后，A向B反压pause X-ON，B收到pause X-ON后，该端口恢复发送报文。  
+
+![图5](https://cdn.img.wenhairu.com/images/2020/02/11/m8lD6.png "图5")  
+
+从上面可以看出Ethernet Pause的缺点，就是它的Pause是Port级别，无法区分流量，"八亲不认、要杀通杀"，若网络环境中有多种流量，如:TCP与RDMA流量混跑，TCP流量是需要让其丢包降速来控制发送速率的，而RDMA流量又不希望丢包，此时Ethernet Pause方式来做流控就无法满足混跑需求。而PFC的设计就是为了解决这个问题的。  
+PFC - Priority Flow Control：是Ethernet Pause的扩展，可以对不同的优先级的流量进行pause，从而实现不同类型流量的共存。  
+PFC相比Ethernet Pause多了一个pg的概念，对于每个port ingress都会定义8个pg，然后把不同的dscp报文映射到不同的pg，这样就实现了不同业务的区别对待。  
+
+![图6](https://cdn.img.wenhairu.com/images/2020/02/11/m83Xd.png "图6")  
+
+一个典型的PFC流控过程如下：  
+
+![图7](https://cdn.img.wenhairu.com/images/2020/02/11/m8j0X.png "图7")  
+
+1. server1与server2同时向server3发送数据。
+2. server3网卡入向buffer超过水线，触发反压PFC X-OFF给TOR3。
+3. TOR3收到PFC后停止向server3发送数据，同时将发往server3的数据缓存到本地buffer，本地ingress pg计数不断增加，当计数超过水线后，触发PFC pause反压给LEAF。
+4. 如过程3，逐跳发送PFC X-OFF，直至将PFC Pause发到server1和server2，server1和server2收到PFC pause后停止发送报文给server3。
+5. 当server3网卡入向buffer低于水线后，触发PFC X-ON发送给TOR3。
+6. TOR3收到PFC X-ON后，恢复发送报文给server3，当TOR3 ingress pg计数低于水线后触发PFC X-ON发给LEAF。
+7. 如过程6，逐跳发送PFC X-ON，直至将PFC X-ON发到server1和server2，server1和server2收到PFC X-ON后恢复发送报文给server3。 
+
+当然如上过程是一个理想状态下的情况，实际情况中，PFC pause的起源不一定是server，也可能是incast场景比较严重的情况下，交换机先到达了水线，触发反压PFC pause，PFC pause的终结位置也不一定是数据发送源，有可能在中途的交换机buffer充足的情况下，没等到向上游发送PFC X-OFF时就收到了下游的PFC X-ON，恢复向指定queue发送数据，从而解除拥塞事件，相当于交换机帮忙吸收了拥塞的压力。
+
+### Headroom buffer  
+当交换机的一个port的一个pg超过了pfc水线，那么该端口就会向上游发送PFC X-OFF，从pg超过pfc水线到发送PFC X-OFF再到对端停止发送报文这段时间内依然会有数据包从上游发送过来。为了防止交换机在这个过程期间收到的数据包没有足够的buffer缓存这些报文，在shared buffer里单独划分出来一块空间专门存储这类报文，这块空间名字即headroom buffer。  
+headroom这段空间不能太小，太小了有可能造成上游来不及响应导致交换机丢包；也不能太大，太大了的话可能会导致headroom被占满导致shared buffer空间变得很小。  
+那么headroom究竟要设置多大呢？幸运的是，这个值是可以被计算出来的。  
+例如：交换机上收到一个 MTU 长的报文，该报文正好导致ingress queue超过threshold而触发PFC pasue X-OFF。该 pause从交换机发送出去，到NIC处理该pasue并生效这段时间内。  
+最糟情况下，交换机还会收到以下数量的数据：  
+* MTU-R：交换机发送该PFC pause前，交换机可能正在发送一个MTU长的报文，pause要等该报文发完后才能发送。  
+* Wire_Delay：该pause到达NIC所需耗时和光纤速率以及长度有关，如：对于10G光纤，每100m会缓存约500bytes的in wire数据。总的in wire数据由两部分组成：
+  - 跟随在第一个触发PFC报文后的in wire数据。
+  - pause发往NIC这段时间内新产生的in wire数据。
+* MTU_S：NIC收到该pause时，NIC可能正在处理一个MTU长的报文，NIC要处理完这个报文后再处理该pause报文。
+* NIC_Process：NIC处理pause的耗时，PFC规范规定NIC处理pause的最大耗时是60 quanta。
+
+综上所述，每个queue需预留的headroom如下：  
+```
+hdrm_sz_in_bytes = MTU_R + MTU_S + NIC_Process + Wire_Delay_in_wire * 2
+```
+此外，交换机上buffer管理的最小单元是cell（TD3 cell size = 256bytes），即使收到一个64bytes的数据包，也会单独占用一个cell。因此在最糟糕的情况下，如果传输的都是64bytes小包，则需要预留的headroom cell如下：
+```
+hdrm_sz_in_cell = (hdrm_sz_in_bytes / 64) * cell_size
+```
+
+### PFC threshold  
+PFC threshold习惯称之为PFC水线，这个参数是PFC流控的核心，之前说了超过水线就会触发PFC，那么这个水线的合理设置就很关键了。水线太低会导致PFC触发过于敏感频繁触发，导致性能上不去；水线太高则可能会出现PFC流控来不及生效，导致丢包。  
+交换机一般支持两种水线机制：  
+* static threshold：每个queue buffer资源固定，资源利用率较低，无法应对突发的大流量冲击。
+* dynamic threshold：基于剩余buffer的动态threshold，即在有突发流量时，可以尽可能的抢占剩余的buffer，当剩余的buffer不足时，也能保证能够使用设置的最小buffer。这样能有更好的资源利用率，同时也兼顾了公平性。一般会采用dynamic threshold来做PFC水线机制。  
+
+配置dynamic threshold时，一般会取一个权重值alpha：
+```
+threshold[Bytes] = alpha * free_buffer[Bytes]
+```
+ingress pg理论上能使用的最大buffer资源与alpha的关系如下：
+```
+max_used = alpha * free = alpha * (total_buffer - max_used)
+=>
+max_used = total_buffer * alpha/(alpha+1)
+```
+
+![图8](https://cdn.img.wenhairu.com/images/2020/02/11/mAmeD.png "图8") 
+
+需要注意的是入向pg的alpha和出向queue的alpha是两个值，比如BRCM芯片可将入向alpha设置为1/8，而出向alpha设置为8（也就是说出向alpha最大可用到所有buffer的8/9）。入向和出向的alpha值设置要满足极端的incast场景下不丢包，例如一台交换机有56个接口，那么要满足在incast 55打1的情况下出向buffer依旧是够用的。  
+alpha的计算公式如下：  
+* N：入向端口数，M：出向端口数
+* a1：入口alpha，a2：出口alpha
+* a1/(1 + a1*N) * N/M < a2/(1+a2*M)
+
+### 水线与buffer  
+#### ingress水线  
+
+![图9](https://cdn.img.wenhairu.com/images/2020/02/11/mAAHP.png "图9") 
+
+* PG Min Limit：一个接口的一个pg的预留buffer，在最坏的情况下pg也能使用的保障buffer空间。
+* Port Min Limit：一个接口的预留buffer，在最坏的情况下端口也能使用的保障buffer空间。如果只有一个pg启用了lossless，那么PG Min Limit = Port Min Limit。
+* PG Shared Limit：一个接口的一个PG可以使用的shared buffer。
+* Port Shared Limit：一个接口可以用的shared buffer。
+* Service Pool Limit：整个shared pool可以用的buffer，如果只有一个shared pool，那么shared pool buffer = 整个交换机的shared buffer。
+* PG Headroom Limit：一个端口的一个pg可以使用的headroom buffer。
+* Global Headroom Limit：整个交换机的Headroom总量。
+
+##### 入向buffer使用优先级  
+* PG Min > PG Shared > Headroom
+* PG Shared Limit触发之后收到的报文存入headroom buffer，headroom buffer用光后丢包。
+* PG Shared Limit可以基于cell count或alpha值配置。
+
+#### egress水线
+
+![图10](https://cdn.img.wenhairu.com/images/2020/02/11/m8LLp.png "图10") 
+
+* Guaranteed buffer Limit：出向queue的预留buffer。
+* Shared buffer Limit：出向queue的能使用的shared buffer。
+
+##### 出向buffer使用优先级  
+* Guaranteed buffer Limit > Shared buffer Limit
+* Shared buffer Limit用完以后触发taildrop。
+* Shared buffer Limit可以基于cell count或alpha值配置。
+
+### PFC的缺点  
+PFC的最大缺点就是扩散问题，PFC是queue级别的流控，并不能基于flow，因此一旦出现某个业务（某个flow）的incast场景，那么可能导致PFC反压扩散到整个RDMA集群，导致大面积的性能下降。除此之外，过多的PFC会导致buffer的逐级堆积现象，从业务角度来看会出现延时增大现象。  
+因此需要在流控中尽量减少PFC的出现，由此引入ECN技术。  
+
+### ECN  
+#### ECN简介  
+ECN是流控的一种，是避免流量拥塞的一种机制。  
+ECN - Explicit Congestion Notification 使用IP头中的DiffServ字段的后两位来标识拥塞。  
+* ECN 00：表示不支持ECN流控。
+* ECN 01/10：表示支持ECN流控。
+* ECN 11：表示出现网络拥塞。
+
+![图11](https://cdn.img.wenhairu.com/images/2020/02/11/m8vSI.png "图11") 
+
+#### ECN工作过程  
+
+![图12](https://cdn.img.wenhairu.com/images/2020/02/11/m8BWg.png "图12") 
+
