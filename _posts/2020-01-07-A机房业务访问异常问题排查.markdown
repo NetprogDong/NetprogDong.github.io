@@ -38,7 +38,7 @@ A机房二期server ip段 = 10.39.0.0/16
 
 B机房server ip段 = 10.13.0.0/16
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/A597EB19-432B-4EB6-A4D8-00F72D732848.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m8HVt.png "图1")
 
 ### 排查分析过程
 
