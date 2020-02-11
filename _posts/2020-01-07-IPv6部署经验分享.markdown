@@ -18,7 +18,7 @@ categories: 经验分享 IPv6
 以某厂商 TD3交换机表项规格为例：
 下表中，双栈模式，v4v6规格不共享；其他模式，v4v6规格共享
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/FB7841E1-8D31-4126-B32F-CC018A0D2017.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m80yT.png "图1")
 
 因此，在新建项目前期规划时，不仅需要考虑设备选型、流量收敛比、服务器数量、虚机数量、网络架构，同时需要结合实际需求来确定v4v6部署方式、设备工作模式，避免上线后由于选型和工作模式问题导致表项容量与网络架构设计规格不符的情况。
 
