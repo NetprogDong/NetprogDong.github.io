@@ -12,11 +12,11 @@ _vxlan环境下ipv6部署遇到的问题_
 
 tc机房开启ipv6的服务器能够正常生成ipv6 global ip，但是无法ping通公网。
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/B3D4EC31-FF95-4824-BEF0-51912D263C37.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m8R6S.png "图1")
 
 ### 网络拓扑
 
-![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/995284BB-AEE3-4D2D-8AE9-884BC32DE4C3.png "图2")
+![图2](https://cdn.img.wenhairu.com/images/2020/02/11/m8pih.png "图2")
 
 ### 排查过程
 
@@ -123,7 +123,7 @@ interface Vsi-interface12127
 
 然而，某厂商交换机对收到的arp/ns消息会首先在硬件层面做一个合法性判断，判断的内容为收到的arp/ns报文的源mac是否与自己的mac相同，如果相同，认为不合法，直接将报文丢弃。leaf12收到leaf9发来的ns后检查源mac与自身mac相同，于是丢弃，从而造成了tcserver无法收到ns消息，不能触发na答复，进而导致leaf12学不到tcserver的nd信息。
 
-![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/E397EB46-44E8-4A0F-8C18-F51C8B21A069.png "图3")
+![图3](https://cdn.img.wenhairu.com/images/2020/02/11/m8g7B.png "图3")
 
 在开启ipv6 nd抑制功能后，nd学习过程上送软件层面处理，软件层面无该合法性检查，于是故障恢复。在询问交换机厂商研发确认开启ipv6 nd抑制无风险后，全网开启该功能来规避该问题。
 
