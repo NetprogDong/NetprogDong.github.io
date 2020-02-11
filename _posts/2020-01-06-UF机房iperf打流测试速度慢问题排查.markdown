@@ -40,19 +40,19 @@ YH机房到BX机房  10.23.3.85 --- 10.77.113.155 测试速度900Mb/S左右
 
 从抓包中查看到YH机房、BX机房、DBL机房发送的TCP SYN包中正常有窗口偏移option，滑动窗口够大，不会成为传输瓶颈。
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/6E8BC850-8C9A-4458-BC0D-ADE519AE88FA.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m8O6v.png "图1")
 
-![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/46242B7E-883E-420C-9864-7F21CC741E83.png "图2")
+![图2](https://cdn.img.wenhairu.com/images/2020/02/11/m8GKI.png "图2")
 
 但从有孚机器的SYN包中均未发现支持窗口偏移特性，接收窗口极小。
 
-![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/4175969A-96A0-4F3D-AE47-E75CFC0B3074.png "图3")
+![图3](https://cdn.img.wenhairu.com/images/2020/02/11/m8nNP.png "图3")
 
-![图4](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/294FCD85-FC5C-4452-ABAF-D40CA00D4EF5.png "图4")
+![图4](https://cdn.img.wenhairu.com/images/2020/02/11/m8UuX.png "图4")
 
 滑动窗口偏移特性只有两端都支持才有效，因此从有孚的抓包来看有很多tcp windows full的提示包，这也印证了确实有tcp滑动窗口太小的问题存在。
 
-![图5](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/16883A6C-3262-4614-B508-8194A71DFEB8.png "图5")
+![图5](https://cdn.img.wenhairu.com/images/2020/02/11/m8uj6.png "图5")
 
 但为什么有孚机房内部测试速度是ok的呢？
 
