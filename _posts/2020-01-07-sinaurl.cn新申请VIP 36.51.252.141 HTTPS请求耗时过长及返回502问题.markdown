@@ -12,12 +12,12 @@ _业务服务器异常类问题_
 
 业务方反馈使用新申请的公网vip 36.51.252.141部署业务后出现https请求应答偶发耗时过长，也会出现返回502错误。
 
-![图1](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/DA1B60CE-B8CE-412D-8747-826BD0582E12.png "图1")
+![图1](https://cdn.img.wenhairu.com/images/2020/02/11/m8cWN.png "图1")
 
 
 ### 业务转发路径
 
-![图2](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/993DACA7-44F8-4105-8D75-A9EE5ABCA4D5.png "图2")
+![图2](https://cdn.img.wenhairu.com/images/2020/02/11/m8aZp.png "图2")
 
 
 ### 排查分析过程
@@ -32,7 +32,7 @@ _业务服务器异常类问题_
 
 出现请求耗时过长现象，抓包分析截图如下：
 
-![图3](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/A41D1E86-36A4-441C-93D0-1FEA9D544603.png "图3")
+![图3](https://cdn.img.wenhairu.com/images/2020/02/11/m8yyD.png "图3")
 
 可以看到tcp流最后一次握手与http get请求之间的间隔时间有6s+，属异常现象。
 
@@ -40,11 +40,11 @@ _业务服务器异常类问题_
 
 同样出现请求耗时过长现象
 
-![图4](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/115C24B9-5F2F-4A9C-84B8-EDF7B069FA2B.png "图4")
+![图4](https://cdn.img.wenhairu.com/images/2020/02/11/m8WVH.png "图4")
 
 抓包分析截图如下：
 
-![图5](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/EF2EAC57-4BDA-407F-A730-170A0BC25581.png "图5")
+![图5](https://cdn.img.wenhairu.com/images/2020/02/11/m8Msn.png "图5")
 
 可以看到这条tcp流总耗时12s+，与curl测试结果吻合。
 
@@ -58,7 +58,7 @@ _业务服务器异常类问题_
 
 报文内容如下：
 
-![图6](https://raw.githubusercontent.com/NetprogDong/image_repo/master/image_blog/FE66E7AD-E031-486B-B37F-85B1D64C785E.png "图6")
+![图6](https://cdn.img.wenhairu.com/images/2020/02/11/m84XG.png "图6")
 
 可以看到，seq为1，并且携带了get请求消息，大小为133字节，因此确认应该是该tcp流的最后一个握手ack。
 
