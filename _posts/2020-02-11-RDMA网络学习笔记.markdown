@@ -172,3 +172,35 @@ ECN - Explicit Congestion Notification 使用IP头中的DiffServ字段的后两�
 
 ![图12](https://cdn.img.wenhairu.com/images/2020/02/11/m8BWg.png "图12") 
 
+概念如下：  
+* RP -- Reaction Point：数据流发送端，也是产生拥塞后进行降速的一方。
+* NP -- Notification Point：数据流的接收端，也是产生拥塞后产生CNP包通知RP降速的一方。
+* CP -- Congestion Point：产生接口队列拥塞的交换机。
+* CNP -- Congestion Notification Packet：由NP产生，发往RP，通知RP降速。
+
+工作过程如下：
+1. RP通过网络向NP发送数据流，当RP使能ECN流控功能后，被发送数据流的IP头部ECN位为ECN(01/10)。
+2. CP发生指定priority转发queue拥塞，开始检查收到的指定队列的数据包的IP包头ECN位，如果为ECN(01/10),证明该流的发送端和接收端支持ECN流控，那么会将该数据包的ECN置位为CE(11)，并继续转发。
+3. 当NP收到ECN置位为CE的数据包后，NIC会主动构造并发送CNP给源端RP。
+4. CP直接转发CNP报文。
+5. 当RP收到CNP后，再通过开启的拥塞算法进行相应的降速或暂停发送数据动作。现有的算法有DC-QCN、Timely、HPCC等。
+
+#### ECN优缺点  
+ECN是flow级别的流控，相比于PFC拥有更细粒度的流控机制，此外ECN只会触发降速动作，并不会导致停流，能实现更低的延时。但是ECN从触发到降速的生效路径较长，响应灵敏度不如PFC迅速。  
+
+#### ECN的关键参数  
+##### ECN threshold  
+交换机上ECN大多数是通过WRED实现的，当egress queue长度超过水线后，会按照指定概率将报文标记成ECN(11),具体算法如下：  
+
+![图13](https://cdn.img.wenhairu.com/images/2020/02/11/m8sYo.png "图13") 
+
+* Kmin：egress queue 长度超过该值后开始mark ECN。
+* Kmax：egress queue 长度超过该值后按100%概率mark ECN。
+* Pmax：egress queue 长度为Kmax时mark ECN的概率。
+
+##### CNP调度优先级  
+因为RP收到CNP后才会降速，所以CNP在整个网络中需要以最高优先级进行调度转发。建议给CNP分配了一个独占的queue，同时该queue上配置SP(Strict Priority)模式来保证以最高优先级转发CNP。
+
+### 服务器端流控算法  
+当前的流控算法有DC-QCN、Timely、HPCC等，都是负责解决当服务器收到CNP后，是否降速，怎么降，降多少的问题。有兴趣的可以搜索下相关的论文，本人由于能力及精力原因这里不多做讨论。
+
