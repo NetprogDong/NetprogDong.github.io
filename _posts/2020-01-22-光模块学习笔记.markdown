@@ -50,7 +50,7 @@ SerDes这个概念在交换机的转发芯片上也同样存在，拿Broadcom公
 | TH4  | PAM4-50G/PAM4-100G |
 
 ### 光模块简单工作原理  
-
+#### 逻辑结构
 ![图3](https://cdn.img.wenhairu.com/images/2020/02/12/mAuAG.png "图3")
 
 * MAC：Medium Access Control，介质访问控制，光模块与交换机物理互联部分。
