@@ -1,0 +1,88 @@
+---
+layout: post
+title:  "光模块学习笔记"
+date:   2020-01-22 15:30:36 +0530
+description: 学习笔记
+categories: 光模块 serdes
+---
+
+众所周知，IDC设备间互联当前常见的有两种方式：光纤、网线（双绞线）。  
+光纤与网线相比有如下优势：  
+* 传输数据容量更高。
+* 更轻、占用空间更小，更加便于布线施工。
+* 传输距离更长。
+* 发热量远低于双绞线（金属介质）。
+* 节约有色金属。
+* 更好的兼容性。
+* 抗干扰能力更强。
+
+拥有众多优势的光纤必定占据当前以及今后的主导地位，因此了解光模块的相关知识对于网络工程师来说变得相当重要，那么如何将服务器、交换机产生的数据电信号转换成适当的光信号在光纤中传输呢？  
+
+### Serdes  
+首先先来了解一个概念，Serdes。Serdes是SERializer(串行器)/DESerializer(解串器)的简称。它是一种主流的时分多路复用(TDM)、点对点(P2P)的串行通信技术。即在发送端多路低速并行信号被转换成高速串行信号，经过传输媒体(光缆或铜线)，最后在接收端高速串行信号重新转换成低速并行信号。  
+光模块从早期的1G、10G、40G，到如今的25G、100G，再到后续的50G、200G、400G、800G都是用serdes调制方式来对数据信号进行调制。  
+Serdes调制方式分为两种：  
+* NRZ - Non-Return-to-Zero：不归零调制，1G、10G、40G、25G、100G和早期的200G都属于NRZ调制方式。
+* PAM4 - Pulse Amplitude Modulation4：4阶脉冲幅度调制，一种近几年被引入到高速信号互联领域的调制方式，50G、200G、400G、800G将采用该调制方式实现。
+
+#### NRZ与PAM4比较  
+NRZ信号采用高、低两种信号电平表示数字逻辑信号的1、0，每个时钟周期可以传输1bit的逻辑信息。  
+PAM4信号采用4个不同的信号电平进行信号传输，每个时钟周期可以传输2bit的逻辑信息，即00、01、10、11。PAM4信号采用4个不同的信号电平进行信号传输，每个时钟周期可以传输2bit的逻辑信息，即00、01、10、11。  
+因此，在相同的波特率条件下，PAM4的信号调制速率是NRZ的2倍，即：在25GBdps的波特率条件下，NRZ信号的调制速率为25Gbps，PAM4信号的调制速率为50Gbps。  
+
+![图1](https://cdn.img.wenhairu.com/images/2020/02/12/mAG40.png "图1")
+
+### 光模块速率与serdes的关系  
+当前25G光模块(SFP28)与100G光模块(QSFP28)的调制方式均为NRZ-25G，25G光模块采用单通道，而100G光模块采用4通道实现。  
+SFP光模块家族调制方式对照表如下：  
+
+![图2](https://cdn.img.wenhairu.com/images/2020/02/12/mAy3K.png "图2")
+
+#### Switch ASIC SerDes IO
+SerDes这个概念在交换机的转发芯片上也同样存在，拿Broadcom公司的XGS系列芯片来举例，不同型号的芯片产品具有不同的SerDes IO速率。  
+|  BRCM ASIC   | ASIC IO lane rate  |
+| :-----: | :----: |
+| TD2  | NRZ-10G |
+| TH2  | NRZ-25G |
+| TD3  | NRZ-25G |
+| TH3  | PAM4-50G |
+| TD4  | PAM4-50G |
+| TH4  | PAM4-50G/PAM4-100G |
+
+### 光模块简单工作原理  
+
+![图3](https://cdn.img.wenhairu.com/images/2020/02/12/mAuAG.png "图3")
+
+* MAC：Medium Access Control，介质访问控制，光模块与交换机物理互联部分。
+* PCS：Physical Coding Sub-layer，PCS子层负责对信号编/解码、加、去扰、Alignment插入/去除、排序处理、控制和FEC等功能。
+* PMA：Physical Medium Attachment Sub-layer，PMA子层用来适配PCS和PMD子层，提供映射、复用解复用、时钟恢复等功能。当ASIC IO Serdes与光模块Serdes不匹配时，还需要在PMA层增加Gearbox来实现调制匹配。
+* PMD：Physical Medium Dependent Sub-layer，PMD子层负责和物理传输媒介的接口。一个以太网速率，存在多个不同的PMD子层，分别适配不同的物理接口，比如不同传输距离、不同媒介(光或电)等，PMD子层还负责对数据通道信号检测功能。
+* MDI：Medium Dependent Interface，物理媒介，如光纤、电缆等。
+
+#### 工作过程举例  
+以TH3芯片交换机接入QSFP28 100G光模块来举例，TH3芯片的Serdes为PAM4-50G，而QSFP28光模块的Serdes为NRZ-25G，两端调制速率不匹配，需要使用Gearbox进行调制匹配，又因为QSFP28光模块内无gearbox器件，为了向后兼容，一般将gearbox安装在交换机中。  
+
+![图4](https://cdn.img.wenhairu.com/images/2020/02/12/mA9Gv.png "图4")
+
+1. ASIC芯片将数据以PAM4-50G的调制方式发送给gearbox。
+2. gearbox将双路PAM4-50G调制的数据转换为四路NRZ-25G，发送给光模块。
+3. 数据经过MAC子层、PCS子层、PMA子层后到达PMD子层。
+4. PMD子层将电信号转换为4路光信号，通过激光器将光信号送入MUX合波器，合波后将光信号送入MDI。
+5. 反向过程与上述过程相反。
+
+### 传输距离  
+一个光模块的数据有效传输距离主要取决于内部的PMD器件，下表为光模块PMD命名与工作模式、传输距离的关系表：  
+
+![图5](https://cdn.img.wenhairu.com/images/2020/02/12/mAncg.png "图5")
+
+### 光模块命名含义
+* 400GBASE-FR8：
+  - 400GBASE：表明该模块能够提供的传输速率为400G。
+  - FR：表明该模块为单模，并且传输距离为2KM。
+  - 8：表明serdes lane数量为8，即8通道，因此很容易推导出该模块使用PAM4-50G调制方式。
+* SFP-DD
+  - SFP实际上是简写，全称应为SFP56-DD。
+  - DD的意思是Double Density，使用DD方式封装(两层数据管脚，光模块数据管脚数*2)，顾名思义QSFP56-DD能够提供的传输速率是QSFP56的2倍。
+* DSFP
+  - DSFP的'D'代表Dual，双通道的意思，是不同于DD的另外一种封装方式，DSFP全称为Dual-SFP56,即50G*2。
+  - DSFP56封装的管脚数与SFP56相比只增加2个，与SFP-DD相比结构更加简单，功耗更小，但是向后兼容性不如SFP-DD封装。
