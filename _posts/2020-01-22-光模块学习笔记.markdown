@@ -40,14 +40,8 @@ SFP光模块家族调制方式对照表如下：
 
 #### Switch ASIC SerDes IO
 SerDes这个概念在交换机的转发芯片上也同样存在，拿Broadcom公司的XGS系列芯片来举例，不同型号的芯片产品具有不同的SerDes IO速率。  
-|  BRCM ASIC   | ASIC IO lane rate  |
-| :-----: | :----: |
-| TD2  | NRZ-10G |
-| TH2  | NRZ-25G |
-| TD3  | NRZ-25G |
-| TH3  | PAM4-50G |
-| TD4  | PAM4-50G |
-| TH4  | PAM4-50G/PAM4-100G |
+
+![图6](https://cdn.img.wenhairu.com/images/2020/02/12/mAQf3.png "图6")
 
 ### 光模块简单工作原理  
 #### 逻辑结构
