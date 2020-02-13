@@ -26,10 +26,10 @@ SERVER-LEAF-SPINE-CORE
 1. 拓扑满足要求：每个pod的SPINE设备数量 = 每组CORE设备数量  
 即：CSratio = COREnum/group : SPINEnum/pod = 1 : 1  
 那么：  
-    - podnum = CORE_downstreamlinknum / SPINE_CORE_connlinknum  
-    - CORE_groupnum = SPINE_upstreamlinknum / SPINE_CORE_connlinknum  
-    - LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
-    - SPINEnum/pod = LEAF_upstreamlinknum / LEAF_SPINE_connlinknum
+    - pod数量，podnum = CORE_downstreamlinknum / SPINE_CORE_connlinknum  
+    - CORE组数，CORE_groupnum = SPINE_upstreamlinknum / SPINE_CORE_connlinknum  
+    - 每pod的LEAF数量，LEAFnum/pod = SPINE_downstreamlinknum / LEAF_SPINE_connlinknum  
+    - 每pod的SPINE数量，SPINEnum/pod = LEAF_upstreamlinknum / LEAF_SPINE_connlinknum
 
 2. 更普遍的podnum公式  
 podnum = (CORE_downstreamlinknum / SPINE_CORE_connlinknum) \* CSratio  
