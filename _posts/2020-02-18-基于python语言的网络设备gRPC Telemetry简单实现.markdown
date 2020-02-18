@@ -132,7 +132,10 @@ gRPC Telemetry有两种工作方式：
      destination-group test1
    ```
 
+### 效果图展示  
+SNMP分钟级数据（绿线）与gRPC Telemetry秒级数据（黄线）对比图如下：
 
+![图2](https://cdn.img.wenhairu.com/images/2020/02/18/muMnv.png "图2")
 
 
 
