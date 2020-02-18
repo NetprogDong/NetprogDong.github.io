@@ -10,6 +10,7 @@ gRPC（Google Remote Procedure Call，Google远程过程调用）是Google发布
 
 ### gRPC协议栈分层模型  
 
+![图1](https://cdn.img.wenhairu.com/images/2020/02/18/mugNG.png "图1")
 
 ### gRPC Telemetry工作方式  
 gRPC Telemetry有两种工作方式：  
