@@ -17,18 +17,29 @@ gRPC Telemetry有两种工作方式：
 * Dial-in模式：设备作为gRPC服务器，采集器作为gRPC客户端。由采集器主动向设备发起gRPC连接并订阅需要采集的数据信息。Dial-in模式适用于小规模网络和采集器需要向设备下发配置的场景。
 * Dial-out模式：设备作为gRPC客户端，采集器作为gRPC服务器。设备主动和采集器建立gRPC连接，将设备上配置的订阅数据推送给采集器。Dial-out模式适用于网络设备较多的情况下向采集器提供设备数据信息。
 
+后续所提及的均为Dial-out模式的实现。
+
 ### MACOS gRPC环境安装  
-* 安装protoc工具(建议此步骤前先将python升级到2.7.10以上)  
+* 安装protoc工具(建议此步骤前先将python升级到2.7.10以上) 
+  ```
   brew install protobuf
+  ```
 * 升级pip到最新版本
+  ```
   sudo python -m pip install --upgrade pip
+  ```
 * 安装grpc的python模块
-  sudo python -m pip install grpcio  或 $ sudo python -m pip install grpcio --ignore-installed
+  ```
+  sudo python -m pip install grpcio  
+  或 
+  sudo python -m pip install grpcio --ignore-installed
+  
   sudo python -m pip install grpcio-tools
+  ```
 
 ### H3C gRPC Telemetry简单实现  
 1. 首先需要Dial-out对应的proto文件，这个文件可以直接让H3C的技术对接人员提供，也可以直接创建文件"grpc_dialout.proto"，并将如下代码复制到文件中。
-  ```proto
+  ```
   syntax = "proto2";
   package grpc_dialout;
 
@@ -53,7 +64,9 @@ gRPC Telemetry有两种工作方式：
   }
   ```
 2. 使用protoc工具通过.proto文件生成相应的py文件（操作目录在.proto文件目录下）
+  ```
   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. grpc_dialout.proto
+  ```
   执行如上命令后会看到同目录下会新生成2个文件："grpc_dialout_pb2.py"和"grpc_dialout_pb2_grpc.py"
   这两个文件就是开发要使用的grpc库文件。
 3. 新建文件"h3c_grpc_dialout_test.py"，代码内容如下：
