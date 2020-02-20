@@ -84,7 +84,7 @@ headroom这段空间不能太小，太小了有可能造成上游来不及响应
 例如：交换机上收到一个 MTU 长的报文，该报文正好导致ingress queue超过threshold而触发PFC pasue X-OFF。该 pause从交换机发送出去，到NIC处理该pasue并生效这段时间内。  
 最糟情况下，交换机还会收到以下数量的数据：  
 * MTU-R：交换机发送该PFC pause前，交换机可能正在发送一个MTU长的报文，pause要等该报文发完后才能发送。  
-* Wire_Delay：该pause到达NIC所需耗时和光纤速率以及长度有关，如：对于10G光纤，每100m会缓存约500bytes的in wire数据。总的in wire数据由两部分组成：
+* Wire_Delay：该pause到达NIC所需耗时和光纤速率以及长度有关，如：对于10G光纤，每100m会缓存约625bytes的in wire数据。总的in wire数据由两部分组成：
   - 跟随在第一个触发PFC报文后的in wire数据。
   - pause发往NIC这段时间内新产生的in wire数据。
 * MTU_S：NIC收到该pause时，NIC可能正在处理一个MTU长的报文，NIC要处理完这个报文后再处理该pause报文。
